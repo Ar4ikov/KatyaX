@@ -52,3 +52,6 @@ docker rmi katyax
 | `TRANSFORMERS_CACHE` | Путь к кэшу моделей `transformers` | `.cache` |
 | `ANSWERS_FILE` | Путь к файлу с ответами | `answers.md` |
 | `SQLITE_DB` | Путь к базе данных SQLite | `katyax.sqlite` |
+| `FLASK_SECRET` | Секретный ключ для Flask | `mysupersecret!key` |
+| `FLASK_PORT` | Порт для Flask | `5000` |
+| `TOKEN_EXPIRE_MINUTES` | Время жизни токена в минутах | `60` |

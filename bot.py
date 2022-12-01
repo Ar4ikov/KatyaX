@@ -132,7 +132,7 @@ class EchoBot:
             session.commit()
 
     # solve question in db
-    def get_solve(self, message: Message):
+    def set_solve(self, message: Message):
         """
         Solve question in db
 
@@ -150,22 +150,10 @@ class EchoBot:
             session.commit()
 
     def set_routers(self):
-        @self.bot.message_handler(commands=['start'])
-        def _start(message: Message):
-            self.start(message)
-
-        @self.bot.message_handler(content_types=['text'])
-        def _conversation(message: Message):
-            self.stack_message(message)
-            self.conversation(message)
-
-        @self.bot.callback_query_handler(func=lambda call: call.data.startswith('helpful'))
-        def _helpful(call: CallbackQuery):
-            self.helpful(call)
-
-        @self.bot.callback_query_handler(func=lambda call: call.data.startswith('not_helpful'))
-        def _not_helpful(call: CallbackQuery):
-            self.not_helpful(call)
+        self.bot.message_handler(commands=['start'])(self.start)
+        self.bot.message_handler(content_types=['text'])(self.conversation)
+        self.bot.callback_query_handler(func=lambda call: call.data == 'helpful')(self.helpful)
+        self.bot.callback_query_handler(func=lambda call: call.data == 'not_helpful')(self.not_helpful)
 
     def helpful(self, call: CallbackQuery):
         """
@@ -179,7 +167,7 @@ class EchoBot:
         message: Message = call.message
 
         # set solved status for answered message
-        self.get_solve(message.reply_to_message)
+        self.set_solve(message.reply_to_message)
 
         # get response from message in db
         _message = select(Message).where(Message.message_id == message.reply_to_message.id)
@@ -202,7 +190,7 @@ class EchoBot:
         message: Message = call.message
 
         # set solved status for answered message
-        self.get_solve(message.reply_to_message)
+        self.set_solve(message.reply_to_message)
 
         # get response from message in db
         _message = select(Message).where(Message.message_id == message.reply_to_message.id)
@@ -221,7 +209,8 @@ class EchoBot:
 
         :returns: None
         """
-        user = self.create_or_get(message.from_user.id)
+        self.stack_message(message)
+        self.create_or_get(message.from_user.id)
 
         # answer the question
         answer = self.get_answer_pipeline(message.text)
@@ -245,7 +234,7 @@ class EchoBot:
 
         :returns: None
         """
-        user = self.create_or_get(message.from_user.id)
+        self.create_or_get(message.from_user.id)
         self.bot.send_message(message.chat.id, 'Hello, I am EchoBot')
 
     def run(self):
