@@ -1,0 +1,4 @@
+sqlmodel==0.0.8
+pyTelegramBotAPI==4.7.1
+torch==1.12.1
+transformers==4.24.0
