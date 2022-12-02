@@ -6,6 +6,19 @@ var sendMessage = function(ticket, token, _message) {
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     var params = 'message=' + _message;
     xhr.send(params);
+
+    // clear input
+    $('#message').val('');
+}
+
+var solveTicket = function(ticket, token) {
+    var xhr = new XMLHttpRequest();
+    xhr.open('GET', 'http://127.0.0.1:8080/' + token + '/' + ticket + '/close_thread', true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.send();
+
+    // refresh page
+    location.reload();
 }
 
 // get server timestamp

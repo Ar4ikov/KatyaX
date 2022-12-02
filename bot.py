@@ -9,6 +9,7 @@ from sentence_transformers import SentenceTransformer, util
 import pathlib
 from typing import List
 import requests
+from time import sleep
 
 
 class EchoBot:
@@ -360,11 +361,23 @@ class EchoBot:
             message_id = add_conversation_message(self.engine, ticket_id, user.id, message.date, message.text)
 
             # get token for user
-            token = self.user_tokens[message.from_user.id]
+            token = self.user_tokens.get(message.from_user.id, "")
 
-            # send message to webserver
-            request_url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}/store_user_message'
-            response = requests.post(request_url, params={'message': message.text, 'date': message.date, "id": message_id})
+            success_status = False
+
+            while not success_status:
+                # send message to webserver
+                request_url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}/store_user_message'
+                response = requests.post(request_url, params={'message': message.text, 'date': message.date, "id": message_id})
+
+                if response.status_code == 200:
+                    success_status = True
+                else:
+                    # regenerate token
+                    token = self.webserver.generate_token(user.id)
+                    self.user_tokens[message.from_user.id] = token
+
+                sleep(.00001)
 
             return
             

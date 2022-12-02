@@ -25,6 +25,7 @@ class WebServer(Flask):
         self.add_url_rule('/<token>/<ticket_id>/get_messages', 'get_messages', self.chat, methods=['GET'])
         self.add_url_rule('/<token>/<ticket_id>/store_user_message', 'store_user_message', self.store_user_message, methods=['POST'])
         self.add_url_rule('/<token>/<ticket_id>/send_message', 'send_message', self.send_message, methods=['POST'])
+        self.add_url_rule('/<token>/<ticket_id>/close_thread', 'close_thread', self.close_thread, methods=['GET'])
         self.add_url_rule('/<token>/<ticket_id>/polling/<timestamp>', 'polling', self.polling, methods=['GET'])
         self.add_url_rule('/<token>/get_timestamp', 'get_timestamp', self.get_timestamp, methods=['GET'])
 
@@ -68,7 +69,10 @@ class WebServer(Flask):
             return jsonify({'error': 'ticket is closed'}), 400
 
         message = request.form.get('message')
-        print(message)
+
+        # remove chars that notsql can't handle
+        message = message.replace("'", '"')
+
         user_id = self.verify_token(token)['user_id']
         date = datetime.datetime.now().timestamp()
         conv_message_id = add_conversation_message(self.engine, ticket_id, user_id, date, message)
@@ -93,6 +97,39 @@ class WebServer(Flask):
             return jsonify({'error': 'invalid token'}), 401
 
         return jsonify({'timestamp': datetime.datetime.now().timestamp()})
+
+    def close_thread(self, token, ticket_id):
+        if not self.verify_token(token):
+            return jsonify({'error': 'invalid token'}), 401
+
+        # get ticket status from db
+        with Session(self.engine) as session:
+            ticket = select(UserTicket).where(UserTicket.ticket_id == ticket_id)
+            ticket = session.exec(ticket).first()
+
+        # if ticket is closed, return error
+        if ticket.is_solved == True:
+            return jsonify({'error': 'ticket is closed'}), 400
+
+        # close ticket
+        with Session(self.engine) as session:
+            ticket.is_solved = True
+            session.add(ticket)
+            session.commit()
+
+        # disable echo bot for user
+        if self.bot is not None:
+            user_id = ticket_id.split('_')[1]
+            with Session(self.engine) as session:
+                user = session.exec(select(User).where(User.id == user_id)).one()
+            
+            # disable echo bot for user
+            self.bot.set_echo_status(int(user.telegram_id), False)
+
+            # send message to bot
+            self.bot.send_echo_message(int(user.telegram_id), 'Оператор завершил чат, бот снова доступен')
+
+        return jsonify({'status': 'ok'})
 
     def polling(self, token, ticket_id, timestamp):
         if not self.verify_token(token):
