@@ -13,6 +13,9 @@ class User(SQLModel, table=True):
     is_operator: bool = Field(default=False)
     enable_echo: bool = Field(default=False)
 
+    def as_dict(self):
+        return {c.name: getattr(self, c.name) for c in self.__table__.columns}
+
 
 # describe the message scheme with id, user_id, text, date, is_solved
 class Message(SQLModel, table=True):
@@ -46,12 +49,6 @@ class UserTicket(SQLModel, table=True):
     user_id: int = Field(default=None, index=True)
     ticket_id: str = Field(default=None, index=True)
     is_solved: bool = Field(default=False)
-
-    @classmethod
-    def set_table_name(cls, table_name):
-        cls.__tablename__ = table_name
-
-        return cls
 
     def as_dict(self):
         return {c.name: getattr(self, c.name) for c in self.__table__.columns}

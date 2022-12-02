@@ -2,12 +2,13 @@ import os
 from telebot import TeleBot
 from telebot.types import Message, CallbackQuery
 from telebot import types
-from schemes import User, Message, engine, create_conversation_table
+from schemes import User, Message, UserTicket, ConversationThread, engine, create_conversation_table, add_conversation_message
 from webserver import WebServer
 from sqlmodel import SQLModel, create_engine, Session, select
 from sentence_transformers import SentenceTransformer, util
 import pathlib
 from typing import List
+import requests
 
 
 class EchoBot:
@@ -21,6 +22,8 @@ class EchoBot:
 
         self.engine = engine
         self.webserver = WebServer('webserver', self.engine, bot_cls=self)
+
+        self.user_tokens: dict[int, str] = {}
 
     def load_and_parse_md_answers(self, filename: str):
         """
@@ -81,7 +84,7 @@ class EchoBot:
         response = sorted([(x['corpus_id'], x['score']) for x in result[0]], key=lambda y: y[1], reverse=True)
 
         return self.answers[response[0][0]]
-
+    
     def create_or_get(self, user_id: int):
         """
         Create or get user from db
@@ -99,6 +102,30 @@ class EchoBot:
                 session.commit()
 
         return user
+
+    def recreate_operators(self):
+        basement = pathlib.Path(__file__).parent.absolute()
+        operators = basement / 'operators.txt'
+
+        with open(operators, 'r') as f:
+            operators = f.read().split('\n')
+
+        with Session(self.engine) as session:
+            old_operators = select(User).where(User.is_operator == True)
+            old_operators = session.exec(old_operators).all()
+
+            for operator in old_operators:
+                operator.is_operator = False
+                session.add(operator)
+                session.commit()
+
+            for operator in operators:
+                user = select(User).where(User.telegram_username == operator)
+                user = session.exec(user).first()
+                if user:
+                    user.is_operator = True
+                    session.add(user)
+                    session.commit()
 
     def stack_message(self, message: Message):
         """
@@ -151,8 +178,18 @@ class EchoBot:
             session.add(message)
             session.commit()
 
+    def set_echo_status(self, user_id, echo_status: bool):
+        with Session(self.engine) as session:
+            user = select(User).where(User.telegram_id == user_id)
+            user = session.exec(user).first()
+
+            user.enable_echo = echo_status
+            session.add(user)
+            session.commit()
+
     def set_routers(self):
         self.bot.message_handler(commands=['start'])(self.start)
+        self.bot.message_handler(commands=['closethread'])(self.close_thread)
         self.bot.message_handler(func=lambda m: m.text.startswith("/newtoken"))(self.regenerate_token)
         self.bot.message_handler(content_types=['text'])(self.conversation)
         self.bot.callback_query_handler(func=lambda call: call.data == 'helpful')(self.helpful)
@@ -204,6 +241,11 @@ class EchoBot:
         # edit message, remove keyboard
         self.bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=response)
 
+        self.bot.send_message(message.chat.id, 
+            'Перенаправляю вопрос нашему специалисту, ожидайте ответа!\n' \
+            'По завершению диалога вы можете закрыть ветку вопроса командой /closethread'
+        )
+
         # find operators in db
         operators = select(User).where(User.is_operator == True)
         with Session(self.engine) as session:
@@ -218,6 +260,18 @@ class EchoBot:
         # create table
         with Session(self.engine) as session:
             ticket_id = create_conversation_table(user.id, session, self.engine)
+
+        # create UserTicket table
+        with Session(self.engine) as session:
+            session.add(UserTicket(user_id=user.id, ticket_id=ticket_id))
+            session.commit()
+
+        # set echo status for user
+        self.set_echo_status(user_id, True)
+
+        # generate token for user
+        user_token = self.webserver.generate_token(user.id)
+        self.user_tokens[user_id] = user_token
 
         for operator in operators:
             token = self.webserver.generate_token(operator.id)
@@ -256,6 +310,32 @@ class EchoBot:
         """
         self.bot.send_message(user_id, message)
 
+    def close_thread(self, message: Message):
+        # get user from database
+        user = self.create_or_get(message.from_user.id)
+
+        # get last opened user ticket
+        with Session(self.engine) as session:
+            user_ticket = select(UserTicket).where(UserTicket.is_solved == False, UserTicket.user_id == user.id)
+            user_ticket = session.exec(user_ticket).all()
+
+        if not user_ticket:
+            self.bot.reply_to(message, 'У вас нет открытых веток')
+            return
+
+        user_ticket = user_ticket[-1]
+
+        # close user ticket
+        with Session(self.engine) as session:
+            user_ticket.is_solved = True
+            session.add(user_ticket)
+            session.commit()
+
+        # set echo status for user
+        self.set_echo_status(message.from_user.id, False)
+
+        self.bot.reply_to(message, 'Ветка успешно закрыта')
+
     def conversation(self, message: Message):
         """
         Conversation handler
@@ -264,6 +344,30 @@ class EchoBot:
 
         :returns: None
         """
+        # get user
+        with Session(self.engine) as session:
+            user = select(User).where(User.telegram_id == message.from_user.id)
+            user = session.exec(user).first()
+
+        if user.enable_echo:
+            # get user last opened ticket
+            with Session(self.engine) as session:
+                user_ticket = select(UserTicket).where(UserTicket.is_solved == False, UserTicket.user_id == user.id)
+                user_ticket = session.exec(user_ticket).all()[-1]
+                ticket_id = user_ticket.ticket_id
+
+            # add message to conversation table
+            message_id = add_conversation_message(self.engine, ticket_id, user.id, message.date, message.text)
+
+            # get token for user
+            token = self.user_tokens[message.from_user.id]
+
+            # send message to webserver
+            request_url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}/store_user_message'
+            response = requests.post(request_url, params={'message': message.text, 'date': message.date, "id": message_id})
+
+            return
+            
         self.stack_message(message)
         self.create_or_get(message.from_user.id)
 
@@ -298,6 +402,7 @@ class EchoBot:
         """
         SQLModel.metadata.create_all(self.engine)
         self.set_routers()
+        self.recreate_operators()
         self.bot.infinity_polling(timeout=999999)
 
 if __name__ == '__main__':

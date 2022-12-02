@@ -2,7 +2,7 @@ import jwt
 import datetime
 from flask import Flask, request, jsonify, render_template
 from dataclasses import asdict
-from schemes import User, Message, ConversationThread, create_conversation_table, add_conversation_message, get_conversation_messages
+from schemes import User, Message, UserTicket, ConversationThread, create_conversation_table, add_conversation_message, get_conversation_messages
 from sqlmodel import Session, select
 import os
 from typing import Dict, List
@@ -23,6 +23,7 @@ class WebServer(Flask):
     def set_routers(self):
         self.add_url_rule('/<token>/<ticket_id>', 'chat', self.chat, methods=['GET'])
         self.add_url_rule('/<token>/<ticket_id>/get_messages', 'get_messages', self.chat, methods=['GET'])
+        self.add_url_rule('/<token>/<ticket_id>/store_user_message', 'store_user_message', self.store_user_message, methods=['POST'])
         self.add_url_rule('/<token>/<ticket_id>/send_message', 'send_message', self.send_message, methods=['POST'])
         self.add_url_rule('/<token>/<ticket_id>/polling/<timestamp>', 'polling', self.polling, methods=['GET'])
         self.add_url_rule('/<token>/get_timestamp', 'get_timestamp', self.get_timestamp, methods=['GET'])
@@ -39,9 +40,32 @@ class WebServer(Flask):
         except:
             return False
 
+    def store_user_message(self, token, ticket_id):
+        if not self.verify_token(token):
+            return jsonify({'error': 'invalid token'}), 401
+
+        id_ = request.form.get('id')
+        message = request.args.get('message')
+        user_id = self.verify_token(token)['user_id']
+        date = request.args.get('date')
+
+        conv_message = ConversationThread(id=id_, user_id=user_id, message=message, date=date)
+        self.messages[ticket_id].append(conv_message)
+
+        return jsonify({'status': 'ok'})
+
     def send_message(self, token, ticket_id):
         if not self.verify_token(token):
             return jsonify({'error': 'invalid token'}), 401
+
+        # get ticket status from db
+        with Session(self.engine) as session:
+            ticket = select(UserTicket).where(UserTicket.ticket_id == ticket_id)
+            ticket = session.exec(ticket).first()
+
+        # if ticket is closed, return error
+        if ticket.is_solved == True:
+            return jsonify({'error': 'ticket is closed'}), 400
 
         message = request.form.get('message')
         print(message)
@@ -54,7 +78,13 @@ class WebServer(Flask):
 
         if self.bot is not None:
             user_id = ticket_id.split('_')[1]
-            self.bot.send_echo_message(int(user_id), message)
+
+            # get user from db
+            with Session(self.engine) as session:
+                user = session.exec(select(User).where(User.id == user_id)).one()
+
+            # send message to bot
+            self.bot.send_echo_message(int(user.telegram_id), message)
 
         return jsonify({'status': 'ok'})
 
@@ -87,8 +117,17 @@ class WebServer(Flask):
             sleep(.0000001)
 
         new_messages = [asdict(x) for x in new_messages]
+        
+        # from user ids in new_messages, get users from database
+        with Session(self.engine) as session:
+            users = session.exec(select(User)).all()
 
-        return jsonify({'timestamp': datetime.datetime.now().timestamp(), 'ticket_id': ticket_id, 'messages': new_messages})
+        # get all users from conversaion
+        users = [x for x in users if x.id in [y["user_id"] for y in new_messages]]
+        users = [x.as_dict() for x in users]
+        users = {x['id']: x for x in users}
+
+        return jsonify({'timestamp': datetime.datetime.now().timestamp(), 'ticket_id': ticket_id, 'messages': new_messages, 'users': users})
 
     def _get_messages(self, token, ticket_id):
         if not self.verify_token(token):
@@ -96,23 +135,39 @@ class WebServer(Flask):
 
         # get conversation from db
         conversation = get_conversation_messages(self.engine, ticket_id)
+
+        # get users by user_id from db
+        with Session(self.engine) as session:
+            users = session.exec(select(User)).all()
+
+        # get all users from conversaion
+        users = [x for x in users if x.id in [y.user_id for y in conversation]]
         
         self.messages[ticket_id] = conversation
 
         # return all messages from conversation
-        return conversation
-
+        return conversation, users
+    
     def get_messages(self, token, ticket_id):
-        return jsonify({'messages': [x.as_dict() for x in self._get_messages(token, ticket_id)]})
+        messages, users = self._get_messages(token, ticket_id)
+        return jsonify({'messages': [asdict(x) for x in messages]})
 
     def chat(self, token, ticket_id):
         if not self.verify_token(token):
             return jsonify({'error': 'invalid token'}), 401
 
-        messages = [asdict(x) for x in self._get_messages(token, ticket_id)]
+        messages, users = self._get_messages(token, ticket_id)
+        messages = [asdict(x) for x in messages]
+        users = [x.as_dict() for x in users]
+        users = {x['id']: x for x in users}
+
+        # get ticket status
+        with Session(self.engine) as session:
+            ticket = select(UserTicket).where(UserTicket.ticket_id == ticket_id)
+            ticket = session.exec(ticket).first()
 
         # render template of index.html
-        return render_template('index.html', ticket_id=ticket_id, token=token, messages=messages)
+        return render_template('index.html', ticket_id=ticket_id, token=token, messages=messages, users=users, is_solved=ticket.is_solved)
 
     def run(self, host=None, port=None, debug=None, load_dotenv=True, **options):
         super().run(host, port, debug, load_dotenv, **options)

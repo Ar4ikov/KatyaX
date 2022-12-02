@@ -44,9 +44,13 @@
             <div class="card-body">
               <div class="messages">
                 {% for message in messages %}
+                  {% if users[message.user_id]["is_operator"] == False %}
                   <div class="message-user">
+                  {% else %}
+                  <div class="message-operator">
+                  {% endif %}
                     <div class="message-header">
-                      <p>{{ message.user_id }}</p>
+                      <p>{{ users[message.user_id]["telegram_username"] }}</p>
                       <p>{{ message.date }}</p>
                     </div>
                     <div class="message-body">
@@ -56,14 +60,35 @@
                 {% endfor %}
               </div>
               <!-- input for message with button Отправить -->
+              {% if is_solved == False %}
               <div class="message-input">
                 <input type="text" class="form-control" id="message" placeholder="Введите сообщение">
                 <button type="button" class="btn btn-primary" id="send" onclick="sendMessage(TICKET_ID, TOKEN, $('#message').val());">Отправить</button>
               </div>
+              {% else %}
+              <!-- green alert block with text -->
+              <div class="alert alert-success" role="alert">
+                <h5 class="alert-heading">Решено!</h5>
+                <p>Ваше обращение решено. Спасибо за обращение!</p>
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
       </div>
     </div>
   </body>
+  <footer>
+    <script type="text/javascript">
+      $('.messages').scrollTop($('.messages')[0].scrollHeight);
+
+      // get tree of .messages, parse all values in .messages > .message-* > .message-header > p > text
+      // set new value to .messages > .message-* > .message-header > p > text with timestampToDate function
+      $('.messages').children().each(function() {
+        var date = $(this).find('.message-header').children().last().text();
+        console.log(date);
+        $(this).find('.message-header').children().last().text(timestampToDate(parseFloat(date) * 1000));
+      });
+    </script>
+  </footer>
 </html>
