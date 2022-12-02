@@ -9,16 +9,18 @@ networks:
 # create application of bot named katyax
 services:
   katyax:
-     image: katyax-1.0.0
-     container_name: katyax
-     build:
-       context: .
-       dockerfile: Dockerfile
-     restart: always
-     networks:
-       - default
-     env_file:
-       - .env
+    image: katyax-1.0.0
+    container_name: katyax
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    networks:
+      - default
+    env_file:
+      - .env
+    volumes:
+      - .:/katyax   
   webserver:
     image: webserver-1.0.0
     container_name: webserver
@@ -32,3 +34,5 @@ services:
       - "8088:8088"
     env_file:
       - .env
+    volumes:
+      - .:/katyax
