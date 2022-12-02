@@ -1,8 +1,9 @@
 // create send message with ticket, token
 // and message
-var sendMessage = function(ticket, token, _message) {
+var sendMessage = function(ticket, token, _message, url_) {
     var xhr = new XMLHttpRequest();
-    xhr.open('POST', 'http://127.0.0.1:8080/' + token + '/' + ticket + '/send_message', true);
+    var http_url = url_ + '/' + token + '/' + ticket + '/send_message'
+    xhr.open('POST', http_url, true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     var params = 'message=' + _message;
     xhr.send(params);
@@ -11,9 +12,10 @@ var sendMessage = function(ticket, token, _message) {
     $('#message').val('');
 }
 
-var solveTicket = function(ticket, token) {
+var solveTicket = function(ticket, token, url_) {
+    var http_url = url_ + '/' + token + '/' + ticket + '/close_thread'
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://127.0.0.1:8080/' + token + '/' + ticket + '/close_thread', true);
+    xhr.open('GET', http_url, true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     xhr.send();
 
@@ -22,25 +24,25 @@ var solveTicket = function(ticket, token) {
 }
 
 // get server timestamp
-var getTimestamp = function(token) {
+var getTimestamp = function(token, url) {
+    var http_url = url + '/' + token + '/get_timestamp'
     var xhr = new XMLHttpRequest();
-    xhr.open('GET', 'http://127.0.0.1:8080/' + token + '/get_timestamp', false);
+    xhr.open('GET', http_url, false);
     xhr.send();
     return JSON.parse(xhr.responseText).timestamp;
 }
-
     
 // polling for new messages
-var poll = function(timestamp, ticket, token) {
+var poll = function(timestamp, ticket, token, url_) {
     this.timestamp = timestamp;
 
     var poll_response = $.ajax({
-        url: 'http://127.0.0.1:8080/' + token + '/' + ticket + '/polling/' + timestamp,
+        url: url_ + '/' + token + '/' + ticket + '/polling/' + timestamp,
         type: 'GET',
         success: function(data) {
             this.timestamp = data.timestamp;
             appendMessage(data.messages, data.users);
-            return poll(this.timestamp, ticket, token);
+            return poll(this.timestamp, ticket, token, url_);
             // console.log(data);
         },
         // complete: function() { poll(this.timestamp, ticket, token); },

@@ -27,9 +27,12 @@
     <script type="text/javascript">
       var TOKEN = '{{ token }}';
       var TICKET_ID = '{{ ticket_id }}';
+      var HOST_ = '{{ host }}';
+      var PORT_ = '{{ port }}';
+      var URL_ = 'http://' + HOST_ + ':' + PORT_;
 
-      var ts = getTimestamp(TOKEN);
-      poll(ts, TICKET_ID, TOKEN);
+      var ts = getTimestamp(TOKEN, URL_);
+      poll(ts, TICKET_ID, TOKEN, URL_);
     </script>
   </head>
   <body>
@@ -62,8 +65,9 @@
               <!-- input for message with button Отправить -->
               {% if is_solved == False %}
               <div class="message-input">
-                <input type="text" class="form-control" id="message" placeholder="Введите сообщение">
-                <button type="button" class="btn btn-primary" id="send" onclick="sendMessage(TICKET_ID, TOKEN, $('#message').val());">Отправить</button>
+                <input type="text" class="form-control" id="message" placeholder="Введите сообщение" required>
+                <button type="button" class="btn btn-primary" id="send" onclick="sendMessage(TICKET_ID, TOKEN, $('#message').val(), URL_);">Отправить</button>
+                <button type="button" class="btn btn-danger" id="solve" onclick="solveTicket(TICKET_ID, TOKEN, URL_);">Закрыть тикет</button>
               </div>
               {% else %}
               <!-- green alert block with text -->
