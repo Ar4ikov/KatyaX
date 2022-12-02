@@ -7,20 +7,21 @@ networks:
       name: mynetwork
 
 # create application of bot named katyax
-# services:
-#   katyax:
-#     image: katyax
-#     container_name: katyax
-#     build:
-#       context: .
-#       dockerfile: Dockerfile
-#     restart: always
-#     networks:
-#       - default
-#     env-file:
-#       - .env
+services:
+  katyax:
+     image: katyax-1.0.0
+     container_name: katyax
+     build:
+       context: .
+       dockerfile: Dockerfile
+     restart: always
+     networks:
+       - default
+     env_file:
+       - .env
   webserver:
     image: webserver-1.0.0
+    container_name: webserver
     build:
       context: .
       dockerfile: Dockerfile-flask
@@ -28,6 +29,6 @@ networks:
     networks:
       - default
     ports:
-      - "5000:5000"
-    env-file:
+      - "8088:8088"
+    env_file:
       - .env
