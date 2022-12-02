@@ -271,11 +271,11 @@ class EchoBot:
         self.set_echo_status(user_id, True)
 
         # generate token for user
-        user_token = self.webserver.generate_token(user.id)
+        user_token = self.webserver.generate_token(str(user.id))
         self.user_tokens[user_id] = user_token
 
         for operator in operators:
-            token = self.webserver.generate_token(operator.id)
+            token = self.webserver.generate_token(str(operator.id))
             chat_url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
             self.bot.send_message(operator.telegram_id, f'New ticket from {user_id} \n\n {chat_url}')
 
@@ -295,7 +295,7 @@ class EchoBot:
             self.bot.reply_to(message, "Вы не являетесь оператором")
             return
 
-        token = self.webserver.generate_token(user.id)
+        token = self.webserver.generate_token(str(user.id))
         url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
         self.bot.reply_to(message, f'Новая ссылка для чата: \n\n {url}')
 
@@ -374,7 +374,7 @@ class EchoBot:
                     success_status = True
                 else:
                     # regenerate token
-                    token = self.webserver.generate_token(user.id)
+                    token = self.webserver.generate_token(str(user.id))
                     self.user_tokens[message.from_user.id] = token
 
                 sleep(.00001)
