@@ -2,7 +2,8 @@ import os
 from telebot import TeleBot
 from telebot.types import Message, CallbackQuery
 from telebot import types
-from schemes import User, Message
+from schemes import User, Message, engine, create_conversation_table
+from webserver import WebServer
 from sqlmodel import SQLModel, create_engine, Session, select
 from sentence_transformers import SentenceTransformer, util
 import pathlib
@@ -10,7 +11,7 @@ from typing import List
 
 
 class EchoBot:
-    def __init__(self):
+    def __init__(self, engine):
         self.bot = TeleBot(os.getenv('BOT_TOKEN'))
 
         self.model_id = 'clips/mfaq'
@@ -18,7 +19,8 @@ class EchoBot:
 
         self.answers: List[str] = []
 
-        self.engine = create_engine('sqlite:///' + os.getenv('SQLITE_DB'))
+        self.engine = engine
+        self.webserver = WebServer('webserver', self.engine, bot_cls=self)
 
     def load_and_parse_md_answers(self, filename: str):
         """
@@ -151,6 +153,7 @@ class EchoBot:
 
     def set_routers(self):
         self.bot.message_handler(commands=['start'])(self.start)
+        self.bot.message_handler(func=lambda m: m.text.startswith("/newtoken"))(self.regenerate_token)
         self.bot.message_handler(content_types=['text'])(self.conversation)
         self.bot.callback_query_handler(func=lambda call: call.data == 'helpful')(self.helpful)
         self.bot.callback_query_handler(func=lambda call: call.data == 'not_helpful')(self.not_helpful)
@@ -190,7 +193,7 @@ class EchoBot:
         message: Message = call.message
 
         # set solved status for answered message
-        self.set_solve(message.reply_to_message)
+        # self.set_solve(message.reply_to_message)
 
         # get response from message in db
         _message = select(Message).where(Message.message_id == message.reply_to_message.id)
@@ -200,6 +203,58 @@ class EchoBot:
 
         # edit message, remove keyboard
         self.bot.edit_message_text(chat_id=message.chat.id, message_id=message.message_id, text=response)
+
+        # find operators in db
+        operators = select(User).where(User.is_operator == True)
+        with Session(self.engine) as session:
+            operators = session.exec(operators).all()
+
+        user_id = call.message.reply_to_message.from_user.id
+
+        with Session(self.engine) as session:
+            user = select(User).where(User.telegram_id == user_id)
+            user = session.exec(user).first()
+
+        # create table
+        with Session(self.engine) as session:
+            ticket_id = create_conversation_table(user.id, session, self.engine)
+
+        for operator in operators:
+            token = self.webserver.generate_token(operator.id)
+            chat_url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
+            self.bot.send_message(operator.telegram_id, f'New ticket from {user_id} \n\n {chat_url}')
+
+    def regenerate_token(self, message: Message):
+        args = message.text.split(' ')
+        if len(args) < 2:
+            self.bot.reply_to(message, "Пожалуйста, укажите ID тикета, к которому необходимо получить новый токен")
+            return
+
+        ticket_id = args[1]
+
+        with Session(self.engine) as session:
+            user = select(User).where(User.telegram_id == message.from_user.id)
+            user = session.exec(user).first()
+
+        if not user.is_operator:
+            self.bot.reply_to(message, "Вы не являетесь оператором")
+            return
+
+        token = self.webserver.generate_token(user.id)
+        url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
+        self.bot.reply_to(message, f'Новая ссылка для чата: \n\n {url}')
+
+    def send_echo_message(self, user_id, message):
+        """
+        Send echo message to user
+
+        :param user_id: telegram user id
+
+        :param message: message from user
+
+        :returns: None
+        """
+        self.bot.send_message(user_id, message)
 
     def conversation(self, message: Message):
         """
@@ -246,5 +301,5 @@ class EchoBot:
         self.bot.infinity_polling(timeout=999999)
 
 if __name__ == '__main__':
-    bot = EchoBot()
+    bot = EchoBot(engine=engine)
     bot.run()

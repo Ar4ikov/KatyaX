@@ -1,0 +1,66 @@
+/* gray bubble, left side of div with padding */
+.message-user {
+    background: #f5f5f5;
+    border: 1px solid #e5e5e5;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    width: 80%;
+    float: left;
+    clear: both;
+}
+
+/* blue bubble, right side of div with padding */
+.message-operator {
+    background: #e5f5ff;
+    border: 1px solid #d5e5ff;
+    border-radius: 5px;
+    padding: 10px;
+    margin: 10px 0;
+    width: 80%;
+    float: right;
+    clear: both;
+}
+
+/* message header, gray text, left side of div */
+.message-user .message-header {
+    color: #999;
+    font-size: 12px;
+    text-align: left;
+}
+
+/* message header, blue text, right side of div */
+.message-operator .message-header {
+    color: #999;
+    font-size: 12px;
+    text-align: right;
+}
+
+/* message body, black text, left side of div */
+.message-user .message-body {
+    color: #000;
+    font-size: 14px;
+    text-align: left;
+}
+
+/* message body, black text, right side of div */
+.message-operator .message-body {
+    color: #000;
+    font-size: 14px;
+    text-align: right;
+}
+
+/* enable scroll bar */
+.messages {
+    overflow-y: scroll;
+    height: 500px;
+}
+
+/* set send button in one row with input */
+#send {
+    display: inline-block;
+}
+
+#message {
+    display: inline-block;
+}

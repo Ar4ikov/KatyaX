@@ -1,0 +1,33 @@
+version: '3'
+
+# create network with port 5000
+networks:
+  default:
+    external:
+      name: mynetwork
+
+# create application of bot named katyax
+# services:
+#   katyax:
+#     image: katyax
+#     container_name: katyax
+#     build:
+#       context: .
+#       dockerfile: Dockerfile
+#     restart: always
+#     networks:
+#       - default
+#     env-file:
+#       - .env
+  webserver:
+    image: webserver-1.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile-flask
+    restart: always
+    networks:
+      - default
+    ports:
+      - "5000:5000"
+    env-file:
+      - .env

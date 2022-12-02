@@ -2,9 +2,68 @@
 <html>
   <head>
     <title>My App</title>
+    <!-- add style.css and index.js -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <script src="/static/js/index.js"></script>
+
+    <!-- add jquery -->
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    
+    <!-- add bootstrap -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js"></script>
+
+    <!-- add font awesome -->
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.3.1/css/all.css">
+
+    <!-- add google fonts -->
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+
+    <!-- add popper -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js"></script>
+
+    <!-- add bootstrap-select -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-select/1.13.1/css/bootstrap-select.min.css">
+    <script type="text/javascript">
+      var TOKEN = '{{ token }}';
+      var TICKET_ID = '{{ ticket_id }}';
+
+      var ts = getTimestamp(TOKEN);
+      poll(ts, TICKET_ID, TOKEN);
+    </script>
   </head>
   <body>
-    <h1>My App</h1>
-    <p>My App is a web app that does stuff.</p>
+    <div class="container">
+      <div class="row">
+        <div class="col-md-12">
+          <div class="card">
+            <div class="card-header">
+              <h3>{{ ticket_id }}</h3>
+              {{ token }}
+            </div>
+            <div class="card-body">
+              <div class="messages">
+                {% for message in messages %}
+                  <div class="message-user">
+                    <div class="message-header">
+                      <p>{{ message.user_id }}</p>
+                      <p>{{ message.date }}</p>
+                    </div>
+                    <div class="message-body">
+                      <p>{{ message.message }}</p>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+              <!-- input for message with button Отправить -->
+              <div class="message-input">
+                <input type="text" class="form-control" id="message" placeholder="Введите сообщение">
+                <button type="button" class="btn btn-primary" id="send" onclick="sendMessage(TICKET_ID, TOKEN, $('#message').val());">Отправить</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </body>
 </html>
