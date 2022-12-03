@@ -5,7 +5,7 @@ WORKDIR /katyax
 # copy all to workdir
 COPY . .
 
-RUN apt-get install libpq-dev -y
+RUN apt update && apt-get install libpq-dev -y
 
 # install requirements
 RUN pip install -r requirements.txt
