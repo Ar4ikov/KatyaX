@@ -12,7 +12,7 @@ from time import sleep
 class WebServer(Flask):
     def __init__(self, name, engine, bot_cls=None):
         super().__init__(name)
-        self.secret = os.getenv('SECRET')
+        self.secret = os.getenv('FLASK_SECRET')
         self.engine = engine
         self.bot = bot_cls
         
