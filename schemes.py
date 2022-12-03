@@ -95,4 +95,4 @@ def get_conversation_messages(engine, ticket_id):
     return [ConversationThread(id=row[0], user_id=row[1], date=row[2], message=row[3]) for row in result]
 
 
-engine = create_engine('sqlite:///' + os.getenv('SQLITE_DB'))
+engine = create_engine(os.getenv('SQLITE_DB'))
