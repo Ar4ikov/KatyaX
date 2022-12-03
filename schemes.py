@@ -64,9 +64,10 @@ def create_conversation_table(user_id, session, engine):
     ticket_id = ConversationThread.generate_id(user_id)
     
     # create table with sql query
-    create_table_query = f'CREATE TABLE IF NOT EXISTS "{ticket_id}" ("id" INTEGER PRIMARY KEY AUTOINCREMENT, "user_id" INTEGER, "date" TEXT, "message" TEXT);'
+    create_table_query = f'CREATE TABLE IF NOT EXISTS "{ticket_id}" ("id" SERIAL PRIMARY KEY, "user_id" INTEGER, "date" TEXT, "message" TEXT);'
     with engine.connect() as conn:
         conn.execute(text(create_table_query))
+        conn.commit()
 
     add_conversation_message(engine, ticket_id, user_id=case_message.user_id, date=case_message.date, message=case_message.text)
 
