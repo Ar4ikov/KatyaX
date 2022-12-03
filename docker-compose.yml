@@ -20,7 +20,8 @@ services:
     env_file:
       - .env
     volumes:
-      - .:/katyax   
+      - .:/katyax
+      - ./katyax.sqlite:/katyax/katyax.sqlite
   webserver:
     image: webserver-1.0.0
     container_name: webserver
@@ -36,3 +37,4 @@ services:
       - .env
     volumes:
       - .:/katyax
+      - ./katyax.sqlite:/katyax/katyax.sqlite
