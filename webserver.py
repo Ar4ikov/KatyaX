@@ -205,7 +205,7 @@ class WebServer(Flask):
 
         # render template of index.html
         return render_template('index.html', ticket_id=ticket_id, token=token, 
-        messages=messages, users=users, is_solved=ticket.is_solved, host=os.getenv('FLASK_HOST'), port=os.getenv('FLASK_PORT'))
+        messages=messages, users=users, is_solved=ticket.is_solved, host=os.getenv('REMOTE_ADDR'), port=os.getenv('FLASK_PORT'))
 
     def run(self, host=None, port=None, debug=None, load_dotenv=True, **options):
         super().run(host, port, debug, load_dotenv, **options)

@@ -276,7 +276,7 @@ class EchoBot:
 
         for operator in operators:
             token = self.webserver.generate_token(str(operator.id))
-            chat_url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
+            chat_url = f'http://{os.getenv("REMOTE_ADDR")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
             self.bot.send_message(operator.telegram_id, f'New ticket from {user_id} \n\n {chat_url}')
 
     def regenerate_token(self, message: Message):
@@ -296,7 +296,7 @@ class EchoBot:
             return
 
         token = self.webserver.generate_token(str(user.id))
-        url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
+        url = f'http://{os.getenv("REMOTE_ADDR")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}'
         self.bot.reply_to(message, f'Новая ссылка для чата: \n\n {url}')
 
     def send_echo_message(self, user_id, message):
@@ -367,7 +367,7 @@ class EchoBot:
 
             while not success_status:
                 # send message to webserver
-                request_url = f'http://{os.getenv("FLASK_HOST")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}/store_user_message'
+                request_url = f'http://{os.getenv("REMOTE_ADDR")}:{os.getenv("FLASK_PORT")}/{token}/{ticket_id}/store_user_message'
                 response = requests.post(request_url, params={'message': message.text, 'date': message.date, "id": message_id})
 
                 if response.status_code == 200:

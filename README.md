@@ -54,6 +54,7 @@ docker rmi katyax
 | `SQLITE_DB` | Путь к базе данных SQLite | `katyax.sqlite` |
 | `FLASK_SECRET` | Секретный ключ для Flask | `mysupersecret!key` |
 | `FLAST_HOST` | Хост для Flask | `127.0.0.1` |
+| `REMOTE_ADDR` | IP адрес для Flask | `0.0.0.0` |
 | `FLASK_PORT` | Порт для Flask | `5000` |
 | `FLASK_DEBUG` | Режим отладки для Flask | `False` |
 | `TOKEN_EXPIRE_MINUTES` | Время жизни токена в минутах | `60` |
