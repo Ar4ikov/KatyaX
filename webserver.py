@@ -160,7 +160,7 @@ class WebServer(Flask):
             users = session.exec(select(User)).all()
 
         # get all users from conversaion
-        users = [x for x in users if x.id in [y["user_id"] for y in new_messages]]
+        users = [x for x in users if str(x.id) in [str(y["user_id"]) for y in new_messages]]
         users = [x.as_dict() for x in users]
         users = {x['id']: x for x in users}
 
