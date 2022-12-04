@@ -59,7 +59,7 @@ var timestampToDate = function(timestamp) {
 var appendMessage = function(messages, users) {
     for (let i = 0; i < messages.length; i++) {
         let message = messages[i];
-        let user = users[message.user_id];
+        let user = users[message.user_id.toString()];
         var date = timestampToDate(parseFloat(message.date) * 1000);
         
         if (user.is_operator) {
