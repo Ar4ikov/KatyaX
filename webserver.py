@@ -57,7 +57,7 @@ class WebServer(Flask):
         message = request.args.get('message')
         date = request.args.get('date')
 
-        id_ = add_conversation_message(self.engine, ticket_id, user_id, message.date, message.text)
+        id_ = add_conversation_message(self.engine, ticket_id, user_id, date, message)
         conv_message = ConversationThread(id=id_, user_id=user_id, message=message, date=date)
         
         self.messages[ticket_id].append(conv_message)
