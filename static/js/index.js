@@ -1,8 +1,8 @@
 // create send message with ticket, token
 // and message
-var sendMessage = function(ticket, token, _message, url_) {
+var sendMessage = function(token, _message, url_) {
     var xhr = new XMLHttpRequest();
-    var http_url = url_ + '/' + token + '/' + ticket + '/send_message'
+    var http_url = url_ + '/' + token + '/send_message'
     xhr.open('POST', http_url, true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
     var params = 'message=' + _message;
@@ -12,8 +12,8 @@ var sendMessage = function(ticket, token, _message, url_) {
     $('#message').val('');
 }
 
-var solveTicket = function(ticket, token, url_) {
-    var http_url = url_ + '/' + token + '/' + ticket + '/close_thread'
+var solveTicket = function(token, url_) {
+    var http_url = url_ + '/' + token + '/close_thread'
     var xhr = new XMLHttpRequest();
     xhr.open('GET', http_url, true);
     xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
@@ -33,16 +33,16 @@ var getTimestamp = function(token, url) {
 }
     
 // polling for new messages
-var poll = function(timestamp, ticket, token, url_) {
+var poll = function(timestamp, token, url_) {
     this.timestamp = timestamp;
 
     var poll_response = $.ajax({
-        url: url_ + '/' + token + '/' + ticket + '/polling/' + timestamp,
+        url: url_ + '/' + token + '/polling/' + timestamp,
         type: 'GET',
         success: function(data) {
             this.timestamp = data.timestamp;
             appendMessage(data.messages, data.users);
-            return poll(this.timestamp, ticket, token, url_);
+            return poll(this.timestamp, token, url_);
             // console.log(data);
         },
         // complete: function() { poll(this.timestamp, ticket, token); },
