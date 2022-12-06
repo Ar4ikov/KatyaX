@@ -9,37 +9,33 @@
 ### Сборка образа контейнера
 
 ```bash
-docker build -t katyax .
+docker-compose build
 ```
 
 ### Запуск контейнера
 
 ```bash
-docker run -d --name katyax -v /local/dir/path:/katyax --env-file .env katyax
-```
-
-### Перезапуск контейнера
-
-```bash
-docker restart katyax
+docker-compose up -d
 ```
 
 ### Остановка контейнера
 
 ```bash
-docker stop katyax
+docker-compose down
 ```
 
 ### Удаление контейнера
 
 ```bash
 docker rm katyax
+docker rm webserver
 ```
 
 ### Удаление образа контейнера
 
 ```bash
 docker rmi katyax
+docker rmi webserver
 ```
 
 ## Настройка
