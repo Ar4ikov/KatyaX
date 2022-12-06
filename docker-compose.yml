@@ -17,6 +17,9 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - default
     env_file:
@@ -31,6 +34,9 @@ services:
       context: .
       dockerfile: Dockerfile-flask
     restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - default
     ports:
@@ -78,6 +84,7 @@ services:
       POSTGRES_USER: "testuser"
       POSTGRES_PASSWORD: "testpass"
       PGDATA: "/var/lib/postgresql/data/pgdata"
+    restart: on-failure
     volumes:
       - .:/docker-entrypoint-initdb.d
       - .:/var/lib/postgresql/data
@@ -85,3 +92,6 @@ services:
       - "5432:5432"
     networks:
       - postgres
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "testuser", "-d", "katyax"]
+      interval: 2s
